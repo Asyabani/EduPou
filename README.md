@@ -1,50 +1,127 @@
-# Welcome to your Expo app 👋
+# 🎮 EduPou - Interactive Educational Game for Kids
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**EduPou** is a mobile educational game built with **React Native**, **Expo**, and **TypeScript**. Inspired by the classic *Pou* game, EduPou enhances the experience by allowing children to play while learning how to read, count, draw, and explore simulated rooms like bedrooms, classrooms, and more.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Features
 
-   ```bash
-   npm install
-   ```
+- 📚 **Reading Room** – Learn basic reading skills.
+- ➕ **Math Room** – Practice counting and simple arithmetic.
+- 🎨 **Coloring Room** – Draw and color to spark creativity.
+- 🍽️ **Dining Room** – Simulate mealtime experiences.
+- 🛏️ **Bedroom** – Interact with fun routines.
+- 🧭 **Tab Navigation** – Easily switch between rooms using `expo-router`.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## ⚙️ Tech Stack
 
-In the output, you'll find options to open the app in a
+- **React Native** – Cross-platform mobile development
+- **Expo** – Development and build tools
+- **TypeScript** – Static type checking
+- **expo-router** – File-based routing for navigation
+- **Reusable Components** – Modular and scalable UI
+- **Custom Hooks & Utils** – For clean and efficient logic
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📁 Project Structure
 
-## Get a fresh project
+\`\`\`
+.
+├── app/                    # Screens and navigation
+│   ├── (tabs)/            # Tab layout configuration
+│   ├── _layout.tsx        # Stack layout wrapper
+│   ├── +not-found.tsx     # 404 fallback screen
+│   ├── Bedroom.tsx        # Bedroom screen
+│   ├── ColoringRoom.tsx   # Drawing/coloring activity
+│   ├── DiningRoom.tsx     # Dining simulation
+│   ├── MathRoom.tsx       # Counting/math game
+│   └── ReadingRoom.tsx    # Reading lesson
+│
+├── assets/                # Images, sounds, fonts
+├── components/            # Reusable UI components
+├── constants/             # App-wide constants
+├── hooks/                 # Custom React hooks
+├── scripts/               # Build and helper scripts
+├── utils/                 # Utility/helper functions
+│
+├── app.json               # Expo configuration
+├── eslint.config.js       # ESLint configuration
+├── expo-env.d.ts          # Expo TypeScript types
+├── package.json
+└── README.md
+\`\`\`
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
-```
+## 🛠️ Getting Started
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 1. Clone the Repository
 
-## Learn more
+\`\`\`bash
+git clone https://github.com/Asyabani/EduPou.git
+cd EduPou
+\`\`\`
 
-To learn more about developing your project with Expo, look at the following resources:
+### 2. Install Dependencies
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+\`\`\`bash
+npm install
+# or
+yarn install
+\`\`\`
 
-## Join the community
+### 3. Run the App
 
-Join our community of developers creating universal apps.
+\`\`\`bash
+npm start
+# or
+expo start
+\`\`\`
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 4. Open on a Device
+
+- Download **Expo Go** on Android or iOS.
+- Scan the QR code shown in your terminal or browser.
+
+---
+
+## ➕ How to Add a New Room (Screen)
+
+1. Create a new file in the `app/` directory, e.g. `PlayRoom.tsx`
+2. Add your screen content.
+3. It automatically becomes a route in the app!
+
+\`\`\`tsx
+// app/PlayRoom.tsx
+import { Text, View } from 'react-native';
+
+export default function PlayRoom() {
+  return (
+    <View>
+      <Text>Welcome to Play Room!</Text>
+    </View>
+  );
+}
+\`\`\`
+
+---
+
+## ❓ FAQ
+
+**Q: Why use \`expo-router\`?**  
+A: It simplifies navigation by automatically mapping files to routes based on their location.
+
+**Q: What is \`_layout.tsx\` used for?**  
+A: It provides a shared layout (like navigation tabs) for nested routes.
+
+**Q: What is \`+not-found.tsx\`?**  
+A: A fallback screen shown when the route does not match any file.
+
+---
+
+## 📄 License
+
+MIT License © 2025 [Nurzaman Asyabani]
