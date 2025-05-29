@@ -1,49 +1,101 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  Dimensions,
-  PanResponder,
-  Animated,
-} from 'react-native';
-import Character from '@/components/Character'; // Character component (Pou)
-import { loadData, saveData } from '@/utils/storage'; // AsyncStorage helpers
-import ColoringRoom from '@/app/ColoringRoom';
 import Bedroom from '@/app/Bedroom';
+import DrawingRoom from '@/app/DrawingRoom';
+import Gacha from '@/app/Gacha';
+import MatchingGame from '@/app/MatchRoom';
 import CountingRoom from '@/app/MathRoom';
 import Library from '@/app/ReadingRoom';
+import Character from '@/components/Character';
+import { loadData, saveData } from '@/utils/storage';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  Modal,
+  PanResponder,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-// Define room list and background colors
+import { Audio } from 'expo-av';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+
+
 const rooms = [
-  { name: 'Library', backgroundColor: '#6a9fb5' },
-  { name: 'Math Room', backgroundColor: '#f0a500' },
+  { name: 'Library', backgroundColor: '#E0F2F7' },
+  { name: 'Math Room', backgroundColor: '#F0F4F8' },
   { name: 'Drawing Room', backgroundColor: '#ffffff' },
-  { name: 'Kitchen', backgroundColor: '#3cb371' },
+  { name: 'Matching', backgroundColor: '#e6f7ff' }, 
   { name: 'Bedroom', backgroundColor: 'dark' },
+  { name: 'Gacha', backgroundColor: '#1a2a3a' },
 ];
 
 // Get screen dimensions
 const windowWidth = Dimensions.get('window').width;
 const windowHeight = Dimensions.get('window').height;
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function App() {
-  // Initial status values
-  const [status, setStatus] = useState({
-    hunger: 100,
-    energy: 100,
-    cleanliness: 100,
-    happiness: 100,
-  });
+    const [permissionStatus, setPermissionStatus] = useState(null);
+    const [status, setStatus] = useState({ energy: 100 });
+    const [roomIndex, setRoomIndex] = useState(0);
+    const [drawColor, setDrawColor] = useState('#000000');
+    const [isLightOn, setIsLightOn] = useState(true);
+    const [isSleeping, setIsSleeping] = useState(false);
+    const [showSleepModal, setShowSleepModal] = useState(false);
+    const [showAutoSleepModal, setShowAutoSleepModal] = useState(false);
 
-  const [roomIndex, setRoomIndex] = useState(0); // Current room index
-  const [drawColor, setDrawColor] = useState('#000000'); // Drawing color
-  const [isLightOn, setIsLightOn] = useState(true); // Bedroom light toggle
-  const position = useRef(new Animated.ValueXY()).current; // Character position
 
-  // Load status from storage on first render
+    const position = useRef(
+      new Animated.ValueXY({
+        x: windowWidth / 2 - 50,
+        y: windowHeight - 150,
+      })
+    ).current;
+
+    const playNotificationSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('@/assets/sounds/notif.mp3')
+      );
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isPlaying) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (error) {
+      console.log('Error playing sound:', error);
+    }
+  };
+
+   useEffect(() => {
+    (async () => {
+      if (Device.isDevice) {
+        const { status } = await Notifications.requestPermissionsAsync();
+        setPermissionStatus(status);
+        if (status !== 'granted') {
+          alert('Permission not granted for notifications!');
+        }
+      } else {
+        alert('Must use physical device for notifications');
+      }
+    })();
+  }, []);
+
+  // Load status from storage on mount
   useEffect(() => {
     (async () => {
       const savedStatus = await loadData();
@@ -51,25 +103,121 @@ export default function App() {
     })();
   }, []);
 
-  // Save status every time it changes
+  // Save status on change
   useEffect(() => {
     saveData(status);
   }, [status]);
 
-  // Reset character position when room changes
+  // Handle sleeping logic when energy reaches zero
   useEffect(() => {
-    resetPosition();
-  }, [roomIndex]);
+    if (status.energy <= 0 && !isSleeping) {
+      setIsLightOn(false);
+      setIsSleeping(true);
+    }
+  }, [status.energy]);
 
-  // Reset character to default position
-  const resetPosition = () => {
-    position.setValue({ x: windowWidth / 2 - 50, y: windowHeight - 180 });
-  };
+  // Regenerate energy while sleeping
+  useEffect(() => {
+    if (!isSleeping) return;
 
-  // Pan responder to drag character around the screen
+    const interval = setInterval(() => {
+      setStatus((prev) => {
+        const newEnergy = Math.min(prev.energy + 1, 100);
+        if (newEnergy === 100) {
+          setIsSleeping(false);
+          setIsLightOn(true);
+        }
+        return { ...prev, energy: newEnergy };
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSleeping]);
+
+  // Decrease energy when awake
+  useEffect(() => {
+    if (isSleeping || status.energy <= 0) return;
+
+    const interval = setInterval(() => {
+      setStatus((prev) => ({
+        ...prev,
+        energy: Math.max(prev.energy - 1, 0),
+      }));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isSleeping, status.energy]);
+
+  // Auto-move to Bedroom if energy ≤ 10%
+ useEffect(() => {
+  if (status.energy <= 10 && roomIndex !== 4) {
+    setRoomIndex(4);
+    setShowAutoSleepModal(true);
+    playNotificationSound();
+  }
+}, [status.energy, roomIndex]);
+
+
+  // Register for push notifications (additional safeguard)
+  useEffect(() => {
+    (async () => {
+      if (Device.isDevice) {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') {
+          alert('Failed to get push token for notifications!');
+        }
+      } else {
+        alert('Must use physical device for Push Notifications');
+      }
+    })();
+  }, []);
+
+  const hasNotified = useRef(false);
+
+  // Notify when energy hits 20%
+  useEffect(() => {
+    if (status.energy === 20 && !hasNotified.current) {
+      hasNotified.current = true;
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⚠️ Uh-oh, Low Energy!',
+          body: "Your energy is down to 20%! Time to take a cozy nap in your Bedroom!"
+        },
+        trigger: { seconds: 0 },
+      });
+    }
+
+    if (status.energy > 20) {
+      hasNotified.current = false;
+    }
+  }, [status.energy]);
+
+
+  // RESET CHAR POSITION WHEN ROOM CHANGES
+  // useEffect(() => {
+  //   resetPosition();
+  // }, [roomIndex]);
+  // const resetPosition = () => {
+  //   position.setValue({ x: windowWidth / 2 - 50, y: windowHeight - 180 });
+  // };
+
+  // Determine which room is currently active
+  const currentRoom = rooms[roomIndex];
+  const isColorRoom = currentRoom.name === 'Drawing Room';
+  const isSleepRoom = currentRoom.name === 'Bedroom';
+  const isCountingRoom = currentRoom.name === 'Math Room';
+  const isReadingRoom = currentRoom.name === 'Library';
+  const isMatchRoom = currentRoom.name === 'Matching'; 
+  const isGachaRoom = currentRoom.name === 'Gacha'; 
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: (evt, gestureState) => !isMatchRoom,
       onPanResponderGrant: () => {
         position.setOffset({
           x: position.x._value,
@@ -90,7 +238,6 @@ export default function App() {
       onPanResponderRelease: () => {
         position.flattenOffset();
 
-        // Clamp character within screen bounds
         let x = position.x._value;
         let y = position.y._value;
         if (x < 0) x = 0;
@@ -103,101 +250,160 @@ export default function App() {
     })
   ).current;
 
-  // Navigate to previous room
   const prevRoom = () => {
-    setRoomIndex((prev) => (prev === 0 ? rooms.length - 1 : prev - 1));
+    if (isSleeping) {
+      setShowSleepModal(true);
+      playNotificationSound();
+      return; 
+    }
+    if (status.energy <= 10) {
+      setRoomIndex(4); 
+    } else {
+      setRoomIndex((prev) => (prev === 0 ? rooms.length - 1 : prev - 1));
+    }
   };
 
-  // Navigate to next room
   const nextRoom = () => {
-    setRoomIndex((prev) => (prev === rooms.length - 1 ? 0 : prev + 1));
+    if (isSleeping) {
+      setShowSleepModal(true);
+      playNotificationSound();
+      return; 
+    }
+    if (status.energy <= 10) {
+      setRoomIndex(4); 
+    } else {
+      setRoomIndex((prev) => (prev === rooms.length - 1 ? 0 : prev + 1));
+    }
   };
 
-  // Determine which room is currently active
-  const currentRoom = rooms[roomIndex];
-  const isColorRoom = currentRoom.name === 'Drawing Room';
-  const isSleepRoom = currentRoom.name === 'Bedroom';
-  const isCountingRoom = currentRoom.name === 'Math Room';
-  const isReadingRoom = currentRoom.name === 'Library';
 
-  // List of colors used in Drawing Room
+
   const colors = [
     '#000000', '#ff0000', '#00ff00', '#0000ff',
     '#ffff00', '#ff69b4', '#8a2be2',
   ];
 
   return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        {
-          backgroundColor: isSleepRoom
-            ? isLightOn ? '#ccc' : '#000' // Dark background if lights off in Bedroom
-            : currentRoom.backgroundColor, // Otherwise use room color
-        },
-      ]}
-    >
-      {/* Top Navigation Bar */}
-      <View style={styles.navigation}>
-        <TouchableOpacity
-          onPress={prevRoom}
-          style={[styles.navButton, { backgroundColor: isColorRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
-        >
-          <Text style={[styles.navButtonText, { color: isColorRoom ? '#000' : 'white' }]}>◀</Text>
-        </TouchableOpacity>
-
-        <Text style={[styles.title, { color: isColorRoom ? '#000' : 'white' }]}>
-          {currentRoom.name}
-        </Text>
-
-        <TouchableOpacity
-          onPress={nextRoom}
-          style={[styles.navButton, { backgroundColor: isColorRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
-        >
-          <Text style={[styles.navButtonText, { color: isColorRoom ? '#000' : 'white' }]}>▶</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Drawing Room */}
-      {isColorRoom && (
-        <ColoringRoom drawColor={drawColor} setDrawColor={setDrawColor} />
-      )}
-
-      {/* Math Room */}
-      {isCountingRoom && <CountingRoom />}
-
-      {/* Library (Reading Room) */}
-      {isReadingRoom && <Library />}
-
-      {/* Character - always visible and draggable */}
-      <Animated.View
-        {...panResponder.panHandlers}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView
         style={[
-          styles.characterWrapper,
+          styles.container,
           {
-            transform: position.getTranslateTransform(),
+            backgroundColor: isSleepRoom
+              ? isLightOn ? '#ccc' : '#000'
+              : currentRoom.backgroundColor,
           },
         ]}
       >
-        <Character status={status} isSleeping={isSleepRoom && !isLightOn} />
-      </Animated.View>
+        <View style={styles.navigation}>
+          <TouchableOpacity
+            onPress={prevRoom}
+            style={[styles.navButton, { backgroundColor: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
+          >
+            <Text style={[styles.navButtonText, { color: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>◀</Text>
+          </TouchableOpacity>
 
-      {/* Bedroom - display light switch and status bars */}
-      {isSleepRoom && (
-        <Bedroom
-          status={status}
-          isLightOn={isLightOn}
-          setIsLightOn={setIsLightOn}
-        />
-      )}
-    </SafeAreaView>
+          <Text style={[styles.title, { color: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>
+            {currentRoom.name}
+          </Text>
+
+          <TouchableOpacity
+            onPress={nextRoom}
+            style={[styles.navButton, { backgroundColor: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
+          >
+            <Text style={[styles.navButtonText, { color: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>▶</Text>
+          </TouchableOpacity>
+        </View>
+
+        {isColorRoom && (
+          <DrawingRoom drawColor={drawColor} setDrawColor={setDrawColor} />
+        )}
+
+        {isCountingRoom && <CountingRoom />}
+
+        {isReadingRoom && <Library />}
+        {isGachaRoom && <Gacha />}
+
+        {isMatchRoom &&
+         <MatchingGame />}
+
+        {/* {!isMatchRoom && ( */}
+          <Animated.View
+            {...panResponder.panHandlers}
+            style={[
+              styles.characterWrapper,
+              {
+                transform: position.getTranslateTransform(),
+              },
+            ]}
+          >
+            <Character status={status} isSleeping={isSleepRoom && !isLightOn} />
+          </Animated.View>
+
+        {isSleepRoom && (
+          <Bedroom
+            status={status}
+            isLightOn={isLightOn}
+            setIsLightOn={setIsLightOn}
+            setIsSleeping={setIsSleeping}
+          />
+        )}
+          {/* Modal notifikasi tidur */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showSleepModal}
+          onRequestClose={() => setShowSleepModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>😴 Shhh... Sleep Time!</Text>
+              <Text style={styles.modalText}>
+                Your character is sleeping now. Please let them rest to regain energy!
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowSleepModal(false)}
+                style={styles.modalButton}
+              >
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>Got it!</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={showAutoSleepModal}
+          onRequestClose={() => setShowAutoSleepModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>😴 Energy Low! Time to Sleep</Text>
+              <Text style={styles.modalText}>
+                Your energy is below 10%. You have been moved to the Bedroom to rest.
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowAutoSleepModal(false)}
+                style={styles.modalButton}
+              >
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>Okay</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 
-// Styles for the app
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#FFE8A3', 
+  },
   navigation: {
     width: '100%',
     flexDirection: 'row',
@@ -207,28 +413,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     zIndex: 10,
   },
-
   navButton: {
     padding: 10,
     backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: 8,
   },
-
   navButtonText: {
     fontSize: 24,
     color: 'white',
     fontWeight: 'bold',
   },
-
   title: {
     fontSize: 24,
     fontWeight: 'bold',
   },
-
   characterWrapper: {
     position: 'absolute',
     width: 100,
     height: 100,
-    zIndex: 30,
+    zIndex: 30, 
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#444',
+  },
+  modalText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 25,
+    color: '#666',
+  },
+  modalButton: {
+    backgroundColor: '#5A67D8',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 12,
   },
 });
