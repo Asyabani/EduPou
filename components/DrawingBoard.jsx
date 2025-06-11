@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-export default function DrawingBoard({ color }) {
+export default function DrawingBoard({ color , strokeWidth }) {
   const [paths, setPaths] = React.useState([]);
   const [currentPath, setCurrentPath] = React.useState('');
 
@@ -20,7 +20,7 @@ export default function DrawingBoard({ color }) {
 
   const handleTouchEnd = () => {
     if (currentPath) {
-      setPaths((prev) => [...prev, { d: currentPath, color }]);
+      setPaths((prev) => [...prev, { d: currentPath, color ,strokeWidth }]);
       setCurrentPath('');
     }
   };
@@ -39,7 +39,7 @@ export default function DrawingBoard({ color }) {
             key={i}
             d={p.d}
             stroke={p.color}
-            strokeWidth={4}
+            strokeWidth={p.strokeWidth}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -49,7 +49,7 @@ export default function DrawingBoard({ color }) {
           <Path
             d={currentPath}
             stroke={color}
-            strokeWidth={4}
+            strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
             strokeLinejoin="round"
