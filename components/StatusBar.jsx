@@ -1,44 +1,54 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Platform, ProgressBarAndroid, ProgressViewIOS, StyleSheet, Text, View } from 'react-native';
 
 export default function StatusBar({ status }) {
+  const energy = status.energy ?? 0; // fallback jika tidak ada nilai energy
+
   return (
     <View style={styles.container}>
-      {Object.entries(status).map(([key, value]) => (
-        <View key={key} style={styles.statusItem}>
-          <Text style={styles.label}>🔹 {capitalize(key)}:</Text>
-          <Text style={styles.value}>{String(value)}</Text>
-        </View>
-      ))}
+      <Text style={styles.label}>🔋 Energy:</Text>
+      {Platform.OS === 'android' ? (
+        <ProgressBarAndroid
+          styleAttr="Horizontal"
+          indeterminate={false}
+          progress={energy / 100}
+          color="#00bcd4"
+          style={styles.progressBar}
+        />
+      ) : (
+        <ProgressViewIOS
+          progress={energy / 100}
+          progressTintColor="#00bcd4"
+          style={styles.progressBar}
+        />
+      )}
+      <Text style={styles.energyValue}>{energy}%</Text>
     </View>
   );
 }
 
-const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
-
 const styles = StyleSheet.create({
   container: {
     padding: 10,
-    backgroundColor: 'transparent',
     borderRadius: 10,
     marginVertical: 10,
-  },
-  statusItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 6,
+    alignItems: 'stretch',
+    justifyContent: 'center',
   },
   label: {
     color: '#00bcd4',
     fontWeight: '600',
     fontSize: 16,
-    marginRight: 8,
+    marginBottom: 6,
   },
-  value: {
-    color: 'dark',
-    fontSize: 16,
+  progressBar: {
+    height: 10,
+    borderRadius: 5,
+  },
+  energyValue: {
+    marginTop: 6,
+    alignSelf: 'flex-end',
+    fontSize: 14,
+    color: '#555',
   },
 });

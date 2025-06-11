@@ -1,9 +1,10 @@
-import React from 'react';
 import StatusBar from '@/components/StatusBar';
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 
-export default function Bedroom({ isLightOn, setIsLightOn,status }) {
+export default function Bedroom({ isLightOn, setIsLightOn,status,setIsSleeping }) {
+  
   return (
     <>
     <StatusBar status={status} />
@@ -11,7 +12,12 @@ export default function Bedroom({ isLightOn, setIsLightOn,status }) {
       <View style={styles.spacer} /> 
 
       <TouchableOpacity
-        onPress={() => setIsLightOn(!isLightOn)}
+        onPress={() => {
+          const nextLightState = !isLightOn;
+          setIsLightOn(nextLightState);
+          setIsSleeping(!nextLightState); // tidur kalau lampu dimatikan
+        }}
+
         style={[styles.lightButton, isLightOn ? styles.lightOn : styles.lightOff]}
         activeOpacity={0.7}
       >
@@ -24,7 +30,6 @@ export default function Bedroom({ isLightOn, setIsLightOn,status }) {
       </TouchableOpacity>
     </View>
     </>
-
   );
 }
 
