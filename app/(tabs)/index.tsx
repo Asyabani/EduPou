@@ -3,6 +3,7 @@ import DrawingRoom from '@/app/DrawingRoom';
 import Gacha from '@/app/Gacha';
 import MatchingGame from '@/app/MatchRoom';
 import CountingRoom from '@/app/MathRoom';
+import Puzzle from '@/app/PuzzleRoom';
 import Library from '@/app/ReadingRoom';
 import Character from '@/components/Character';
 import { loadData, saveData } from '@/utils/storage';
@@ -32,6 +33,7 @@ const rooms = [
   { name: 'Drawing Room', backgroundColor: '#ffffff' },
   { name: 'Matching', backgroundColor: '#e6f7ff' }, 
   { name: 'Bedroom', backgroundColor: 'dark' },
+  { name: 'Puzzle', backgroundColor: '#ffffff' },
   { name: 'Gacha', backgroundColor: '#1a2a3a' },
 ];
 
@@ -143,7 +145,7 @@ export default function App() {
         ...prev,
         energy: Math.max(prev.energy - 1, 0),
       }));
-    }, 1000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [isSleeping, status.energy]);
@@ -213,6 +215,7 @@ export default function App() {
   const isCountingRoom = currentRoom.name === 'Math Room';
   const isReadingRoom = currentRoom.name === 'Library';
   const isMatchRoom = currentRoom.name === 'Matching'; 
+  const isPuzzleRoom = currentRoom.name === 'Puzzle'; 
   const isGachaRoom = currentRoom.name === 'Gacha'; 
 
   const panResponder = useRef(
@@ -298,20 +301,20 @@ export default function App() {
         <View style={styles.navigation}>
           <TouchableOpacity
             onPress={prevRoom}
-            style={[styles.navButton, { backgroundColor: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
+            style={[styles.navButton, { backgroundColor: isColorRoom || isMatchRoom || isPuzzleRoom || isReadingRoom || isCountingRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
           >
-            <Text style={[styles.navButtonText, { color: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>◀</Text>
+            <Text style={[styles.navButtonText, { color: isColorRoom || isMatchRoom || isPuzzleRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>◀</Text>
           </TouchableOpacity>
 
-          <Text style={[styles.title, { color: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>
+          <Text style={[styles.title, { color: isColorRoom || isMatchRoom || isPuzzleRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>
             {currentRoom.name}
           </Text>
 
           <TouchableOpacity
             onPress={nextRoom}
-            style={[styles.navButton, { backgroundColor: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
+            style={[styles.navButton, { backgroundColor: isColorRoom || isMatchRoom || isPuzzleRoom || isReadingRoom || isCountingRoom ? 'grey' : 'rgba(255,255,255,0.3)' }]}
           >
-            <Text style={[styles.navButtonText, { color: isColorRoom || isMatchRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>▶</Text>
+            <Text style={[styles.navButtonText, { color: isColorRoom || isMatchRoom || isPuzzleRoom || isReadingRoom || isCountingRoom ? '#000' : 'white' }]}>▶</Text>
           </TouchableOpacity>
         </View>
 
@@ -326,6 +329,9 @@ export default function App() {
 
         {isMatchRoom &&
          <MatchingGame />}
+
+         {isPuzzleRoom &&
+         <Puzzle />}
 
         {/* {!isMatchRoom && ( */}
           <Animated.View
